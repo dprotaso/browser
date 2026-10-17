@@ -1707,11 +1707,25 @@ pub fn boxAxis(self: *Element, frame: *Frame, comptime axis: Axis) f64 {
     if (axis == .width) {
         const owner = self.ownerFrame(frame) orelse return own.value;
         if (owner._style_manager.widthFromContainingBlock(self)) {
-            return own.value;
+            return self.containingBlockWidth(owner);
         }
     }
 
     return @max(own.value, self.contentAxis(frame, axis));
+}
+
+// The width of the nearest ancestor that doesn't fill its own containing
+// block: the root, a sized box or one sized by its content. The boxes that
+// fill it in between share its width.
+fn containingBlockWidth(self: *Element, owner: *Frame) f64 {
+    const style_manager = &owner._style_manager;
+    var parent = self.asNode().flatTreeParentElement(owner);
+    while (parent) |el| : (parent = el.asNode().flatTreeParentElement(owner)) {
+        if (!style_manager.fillsContainingBlock(el)) {
+            return el.boxAxis(owner, .width);
+        }
+    }
+    return self.getElementAxis(owner, .width).value;
 }
 
 pub fn getBoundingClientRect(self: *Element, frame: *Frame) !*DOMRect {

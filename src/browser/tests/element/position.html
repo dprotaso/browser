@@ -294,6 +294,7 @@
   container.className = 'flex-row';
   const item = document.createElement('div');
   item.textContent = 'item';
+  item.style.width = '100px';
   container.appendChild(item);
   document.body.appendChild(container);
 
@@ -330,6 +331,62 @@
     document.body.appendChild(row);
     return row;
   }));
+}
+</script>
+
+<style>
+  .carousel-shell { overflow: hidden; }
+  .carousel-slide { width: 300px; }
+</style>
+
+<script id="carouselPagination">
+{
+  // A carousel pages its slides by how many fit in the shell around its track,
+  // then adds one pagination dot per page. The shell clips the track, so it
+  // takes its width from its containing block, as does the flex track. A shell narrower than a slide makes the page count Infinity,
+  // and the dot loop never ends.
+  const carousel = (setup) => {
+    const section = document.createElement('div');
+    const shell = document.createElement('div');
+    shell.className = 'carousel-shell';
+    const track = document.createElement('div');
+    track.className = 'flex-row';
+    for (let i = 0; i < 24; i++) {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+      track.appendChild(slide);
+    }
+    shell.appendChild(track);
+    section.appendChild(shell);
+    document.body.appendChild(section);
+    setup?.(section);
+    return { shell, track };
+  };
+
+  const { shell, track } = carousel();
+  const slideWidth = track.firstElementChild.getBoundingClientRect().width + 20;
+  const perPage = Math.floor(track.parentElement.offsetWidth / slideWidth);
+  testing.expectTrue(perPage >= 1);
+
+  const dots = document.createElement('div');
+  for (let i = 0; i < Math.ceil(24 / perPage) && i < 50; i++) {
+    dots.appendChild(document.createElement('button'));
+  }
+  testing.expectTrue(dots.childElementCount < 50);
+
+  // The track fills the shell and its slides overflow it.
+  testing.expectEqual(shell.clientWidth, track.clientWidth);
+  testing.expectTrue(track.scrollWidth > track.clientWidth);
+
+  // The walk up to the containing block stops at a declared width.
+  const sized = carousel((section) => { section.style.width = '700px'; });
+  testing.expectEqual(700, sized.shell.offsetWidth);
+  testing.expectEqual(700, sized.track.offsetWidth);
+
+  // An inline-level or out-of-flow shell is still sized by its content.
+  const inline = carousel();
+  inline.shell.style.display = 'inline-block';
+  testing.expectEqual(inline.track.offsetWidth, inline.shell.offsetWidth);
 }
 </script>
 
